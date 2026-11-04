@@ -35,7 +35,8 @@
       <h2>สำนักงาน · Offices</h2>
       <input type="date" id="date" aria-label="Date">
       <button class="btn" id="refresh">Refresh</button>
-      <button class="btn dark" id="csv">Export CSV</button>
+      <button class="btn dark" id="xlsx">Export Excel</button>
+      <button class="btn" id="csv">Export CSV</button>
       <button class="btn danger" id="clear">Clear log</button>
     </div>
     <div class="roll" id="roll"></div>
@@ -146,6 +147,49 @@
       a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
       a.download = `fire-drill-${$('date').value || 'all'}.csv`;
       a.click();
+    };
+
+    // Excel: a roll-call summary sheet plus every check-in. SheetJS loads on first click.
+    const loadXLSX = () => window.XLSX ? Promise.resolve(window.XLSX) : new Promise((ok, fail) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      sc.onload = () => ok(window.XLSX);
+      sc.onerror = () => fail(new Error('Could not load the Excel library'));
+      document.head.append(sc);
+    });
+
+    $('xlsx').onclick = async () => {
+      try {
+        const XLSX = await loadXLSX();
+        const day = ofDay();
+        const counts = Object.fromEntries(OFFICES.map((o) => [o, 0]));
+        for (const c of day) if (c.office in counts) counts[c.office]++;
+
+        const summary = [
+          [`Fire drill roll call · ${BUILDING}`],
+          ['Date', $('date').value || 'All dates'],
+          ['Checked in', day.length],
+          ['Offices reported', `${OFFICES.filter((o) => counts[o]).length}/${OFFICES.length}`],
+          [],
+          ['#', 'Office', 'People', 'Status'],
+          ...OFFICES.map((o, i) => [i + 1, o, counts[o], counts[o] ? 'Reported' : 'Not reported']),
+        ];
+        const rows = [['Date', 'Time', 'Office'], ...[...day].reverse().map((c) => {
+          const d = new Date(c.at);
+          return [dayKey(d), clock(d), c.office];
+        })];
+
+        const wb = XLSX.utils.book_new();
+        const s1 = XLSX.utils.aoa_to_sheet(summary);
+        s1['!cols'] = [{ wch: 18 }, { wch: 28 }, { wch: 10 }, { wch: 14 }];
+        const s2 = XLSX.utils.aoa_to_sheet(rows);
+        s2['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 28 }];
+        XLSX.utils.book_append_sheet(wb, s1, 'Roll call');
+        XLSX.utils.book_append_sheet(wb, s2, 'Check-ins');
+        XLSX.writeFile(wb, `fire-drill-${$('date').value || 'all'}.xlsx`);
+      } catch (err) {
+        alert('Could not export: ' + err.message);
+      }
     };
 
     $('clear').onclick = async () => {
