@@ -25,6 +25,11 @@ export async function addCheckin(entry) {
   await redis('LTRIM', KEY, 0, MAX - 1);
 }
 
+export async function clearCheckins() {
+  if (!URL) { memory.length = 0; return; }
+  await redis('DEL', KEY);
+}
+
 export async function listCheckins(limit = 5000) {
   if (!URL) return memory.slice(0, limit);
   const rows = await redis('LRANGE', KEY, 0, limit - 1);

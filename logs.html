@@ -18,6 +18,7 @@
       <span class="spacer"></span>
       <button class="btn" id="refresh">Refresh</button>
       <button class="btn primary" id="csv">Export CSV</button>
+      <button class="btn danger" id="clear">Clear log</button>
     </div>
 
     <div class="stats" id="stats"></div>
@@ -102,6 +103,18 @@
       a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
       a.download = `checkins-${$('date').value || 'all'}.csv`;
       a.click();
+    };
+
+    $('clear').onclick = async () => {
+      if (!all.length) return;
+      if (!confirm(`Delete all ${all.length} check-ins? This can't be undone. Export a CSV first if you need them.`)) return;
+      try {
+        const res = await fetch('/api/logs', { method: 'DELETE' });
+        if (!res.ok) throw new Error((await res.json()).error);
+        await load();
+      } catch (err) {
+        alert('Could not clear: ' + err.message);
+      }
     };
 
     $('date').onchange = $('office').onchange = render;
