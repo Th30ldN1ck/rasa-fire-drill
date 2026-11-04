@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Check-in log</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="wide">
+    <h1>Check-in log</h1>
+    <p class="sub">Refreshes every 30 seconds.</p>
+
+    <div class="toolbar">
+      <input type="date" id="date">
+      <select id="office"><option value="">All offices</option></select>
+      <span class="spacer"></span>
+      <button class="btn" id="refresh">Refresh</button>
+      <button class="btn primary" id="csv">Export CSV</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Time</th><th>Office</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty hidden" id="empty">No check-ins for this filter.</div>
+    </div>
+    <p class="meta" id="meta"></p>
+  </main>
+
+  <script type="module">
+    import { OFFICES } from '/offices.js';
+
+    const $ = (id) => document.getElementById(id);
+    let all = [];
+
+    // Local date as YYYY-MM-DD, used for the date filter
+    const dayKey = (d) => d.toLocaleDateString('en-CA');
+    $('date').value = dayKey(new Date());
+    for (const o of OFFICES) $('office').append(new Option(o, o));
+
+    function filtered() {
+      const day = $('date').value, office = $('office').value;
+      return all.filter((c) =>
+        (!day || dayKey(new Date(c.at)) === day) && (!office || c.office === office));
+    }
+
+    function render() {
+      const rows = filtered();
+      const byDay = all.filter((c) => !$('date').value || dayKey(new Date(c.at)) === $('date').value);
+
+      $('stats').innerHTML = '';
+      const stat = (n, label) => {
+        const el = document.createElement('div');
+        el.className = 'stat';
+        el.innerHTML = `<b>${n}</b><span></span>`;
+        el.querySelector('span').textContent = label;
+        $('stats').append(el);
+      };
+      stat(byDay.length, $('date').value ? 'Total that day' : 'Total');
+      for (const o of OFFICES) stat(byDay.filter((c) => c.office === o).length, o);
+
+      $('rows').innerHTML = '';
+      for (const c of rows) {
+        const d = new Date(c.at);
+        const tr = document.createElement('tr');
+        for (const v of [d.toLocaleDateString(), d.toLocaleTimeString(), c.office]) {
+          const td = document.createElement('td');
+          td.textContent = v;
+          tr.append(td);
+        }
+        $('rows').append(tr);
+      }
+      $('empty').classList.toggle('hidden', rows.length > 0);
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/logs');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        all = data.checkins;
+        $('meta').textContent = `${all.length} check-ins stored · updated ${new Date().toLocaleTimeString()}`;
+        render();
+      } catch (err) {
+        $('meta').textContent = 'Could not load: ' + err.message;
+      }
+    }
+
+    $('csv').onclick = () => {
+      const lines = [['date', 'time', 'office', 'timestamp_utc']];
+      for (const c of filtered()) {
+        const d = new Date(c.at);
+        lines.push([dayKey(d), d.toLocaleTimeString('en-GB'), c.office, c.at]);
+      }
+      const csv = lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+      a.download = `checkins-${$('date').value || 'all'}.csv`;
+      a.click();
+    };
+
+    $('date').onchange = $('office').onchange = render;
+    $('refresh').onclick = load;
+    load();
+    setInterval(load, 30000);
+  </script>
+</body>
+</html>

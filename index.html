@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check in</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <section id="pick">
+      <h1>Check in</h1>
+      <p class="sub">Which office are you from?</p>
+      <div class="offices" id="offices"></div>
+      <p class="error hidden" id="error"></p>
+    </section>
+
+    <section id="done" class="done hidden">
+      <div class="tick">✓</div>
+      <strong id="done-office"></strong>
+      <span class="sub" id="done-time"></span>
+      <div><button class="link-btn" id="again">Not you? Check in again</button></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { OFFICES } from '/offices.js';
+
+    const $ = (id) => document.getElementById(id);
+    const list = $('offices');
+
+    for (const office of OFFICES) {
+      const b = document.createElement('button');
+      b.className = 'office';
+      b.textContent = office;
+      b.onclick = () => checkIn(office);
+      list.append(b);
+    }
+
+    async function checkIn(office) {
+      const buttons = list.querySelectorAll('button');
+      buttons.forEach((b) => (b.disabled = true));
+      $('error').classList.add('hidden');
+      try {
+        const res = await fetch('/api/checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ office }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Something went wrong');
+        $('done-office').textContent = office;
+        $('done-time').textContent = 'Checked in at ' +
+          new Date(data.entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        $('pick').classList.add('hidden');
+        $('done').classList.remove('hidden');
+      } catch (err) {
+        $('error').textContent = err.message + '. Please try again.';
+        $('error').classList.remove('hidden');
+      } finally {
+        buttons.forEach((b) => (b.disabled = false));
+      }
+    }
+
+    $('again').onclick = () => {
+      $('done').classList.add('hidden');
+      $('pick').classList.remove('hidden');
+    };
+  </script>
+</body>
+</html>

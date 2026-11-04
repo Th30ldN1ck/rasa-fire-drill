@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Check-in QR</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <main>
+    <div class="qr-card">
+      <h1>Scan to check in</h1>
+      <div id="qr"></div>
+      <div class="qr-url" id="url"></div>
+    </div>
+    <p class="no-print" style="text-align:center">
+      <button class="btn primary" onclick="print()">Print</button>
+    </p>
+  </main>
+  <script>
+    // Points at this site's check-in page, so it's right on any domain
+    const url = location.origin + '/';
+    document.getElementById('url').textContent = url;
+    new QRCode(document.getElementById('qr'), { text: url, width: 560, height: 560, correctLevel: QRCode.CorrectLevel.M });
+  </script>
+</body>
+</html>

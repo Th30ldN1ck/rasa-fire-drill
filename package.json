@@ -1,0 +1,8 @@
+{
+  "name": "office-checkin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.js"
+  }
+}
