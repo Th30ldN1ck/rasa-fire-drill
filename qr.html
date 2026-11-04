@@ -1,25 +1,38 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Check-in QR</title>
+  <title>Fire drill QR poster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
-  <main>
-    <div class="qr-card">
-      <h1>Scan to check in</h1>
+  <div class="poster">
+    <header>
+      <h1>จุดรวมพล<span class="en">Assembly Point</span></h1>
+      <p id="building"></p>
+    </header>
+    <div class="body">
+      <h2>สแกนเพื่อลงชื่อ<span class="en">Scan to check in</span></h2>
       <div id="qr"></div>
+      <div class="steps">
+        <span><b>1</b> สแกน · Scan</span>
+        <span><b>2</b> เลือกสำนักงาน · Pick office</span>
+        <span><b>3</b> ยืนยัน · Confirm</span>
+      </div>
       <div class="qr-url" id="url"></div>
     </div>
-    <p class="no-print" style="text-align:center">
-      <button class="btn primary" onclick="print()">Print</button>
-    </p>
-  </main>
-  <script>
+  </div>
+  <p class="print-row no-print"><button class="btn dark" onclick="print()">Print poster</button></p>
+
+  <script type="module">
+    import { BUILDING } from '/offices.js';
+    document.getElementById('building').textContent = 'ซ้อมหนีไฟ · Fire Drill · ' + BUILDING;
     // Points at this site's check-in page, so it's right on any domain
     const url = location.origin + '/';
     document.getElementById('url').textContent = url;

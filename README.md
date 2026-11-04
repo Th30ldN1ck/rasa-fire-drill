@@ -1,14 +1,14 @@
-# Office check-in
+# Fire drill check-in · Rasa Building 2
 
-Scan a QR, tap your office, done. Vanilla HTML/JS + two Vercel functions, no build step.
+At the assembly point people scan a QR, pick their office and confirm. Vanilla HTML/JS + two Vercel functions, no build step.
 
 | Page | What |
 |---|---|
 | `/` | Check-in: tap an office, records office + server time |
-| `/logs` | Log viewer: filter by date/office, counts per office, CSV export. Open to anyone with the link (`noindex`) |
-| `/qr` | Printable QR pointing at `/` on whatever domain it's served from |
+| `/logs` | Roll call: offices not yet reported first, headcount per office, time since first check-in, CSV export, clear. Open to anyone with the link (`noindex`) |
+| `/qr` | Printable assembly-point poster with a QR pointing at `/` on whatever domain it's served from |
 
-- `offices.js` – the office list (shared by the pages and the API, which rejects unknown offices)
+- `offices.js` – building name + the 16 offices (shared by the pages and the API, which rejects unknown offices)
 - `api/checkin.js` (POST `{office}`), `api/logs.js` (GET, newest first, up to 5,000)
 - `api/_store.js` – Upstash Redis list `checkins` over REST; in-memory if no env vars
 

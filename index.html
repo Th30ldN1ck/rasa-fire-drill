@@ -1,71 +1,132 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Check in</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#d92d20">
+  <title>Fire drill check-in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <div class="banner">
+    <div class="banner-in">
+      <div class="badge"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.6 2.2c.4 3-1.2 4.6-2.6 6.2-1.3 1.5-2.5 3-2.5 5.4A4.5 4.5 0 0 0 12 18.3a4.5 4.5 0 0 0 4.5-4.5c0-1.5-.5-2.7-1.2-3.7-.2 1.3-.9 2.2-1.9 2.6.6-3.4-.2-7.3-.8-10.5zM12 22a8 8 0 0 1-8-8c0-3.4 1.7-5.5 3.2-7.2C8.6 5.2 9.8 3.9 9.7 1.6a.6.6 0 0 1 .9-.5C15.8 4 20 8.3 20 14a8 8 0 0 1-8 8z"/></svg></div>
+      <div>
+        <h1>ซ้อมหนีไฟ · Fire Drill</h1>
+        <p id="building"></p>
+      </div>
+    </div>
+  </div>
+
   <main>
-    <section id="pick">
-      <h1>Check in</h1>
-      <p class="sub">Which office are you from?</p>
+    <section class="panel" id="pick">
+      <div class="intro">
+        <h2>เลือกสำนักงานของคุณ<span class="en">Select your office</span></h2>
+        <p>ลงชื่อเมื่อถึงจุดรวมพล · Check in once you reach the assembly point</p>
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="ค้นหาสำนักงาน · Search" autocomplete="off">
+        </label>
+      </div>
       <div class="offices" id="offices"></div>
-      <p class="error hidden" id="error"></p>
     </section>
 
-    <section id="done" class="done hidden">
-      <div class="tick">✓</div>
-      <strong id="done-office"></strong>
-      <span class="sub" id="done-time"></span>
-      <div><button class="link-btn" id="again">Not you? Check in again</button></div>
+    <section class="panel done hidden" id="done">
+      <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2>ลงชื่อเรียบร้อย<span class="en">You're accounted for</span></h2>
+      <div class="where"><b id="done-office"></b><span id="done-time"></span></div>
+      <p class="notice">กรุณารออยู่ที่จุดรวมพลจนกว่าจะได้รับแจ้ง · Please stay at the assembly point until you're told it's safe to go back in.</p>
+      <button class="btn-ghost" id="again" style="margin-top:12px">ลงชื่อให้คนอื่น · Check in someone else</button>
     </section>
+
+    <p class="foot-note">ลงชื่อหนึ่งครั้งต่อหนึ่งคน · One check-in per person</p>
   </main>
 
+  <div class="sheet-bg hidden" id="sheet">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="chosen">
+      <p class="label">ยืนยันสำนักงาน · Confirm your office</p>
+      <p class="chosen" id="chosen"></p>
+      <div class="actions">
+        <button class="btn-big" id="confirm">ยืนยันลงชื่อ · Check in</button>
+        <button class="btn-ghost" id="cancel">เปลี่ยน · Change</button>
+      </div>
+      <p class="error hidden" id="error"></p>
+    </div>
+  </div>
+
   <script type="module">
-    import { OFFICES } from '/offices.js';
+    import { BUILDING, OFFICES } from '/offices.js';
 
     const $ = (id) => document.getElementById(id);
     const list = $('offices');
+    let chosen = null;
 
-    for (const office of OFFICES) {
-      const b = document.createElement('button');
-      b.className = 'office';
-      b.textContent = office;
-      b.onclick = () => checkIn(office);
-      list.append(b);
+    $('building').textContent = BUILDING;
+
+    function renderList() {
+      const q = $('q').value.trim().toLowerCase();
+      list.innerHTML = '';
+      OFFICES.forEach((office, i) => {
+        if (q && !office.toLowerCase().includes(q)) return;
+        const b = document.createElement('button');
+        b.className = 'office';
+        b.innerHTML = `<span class="num">${String(i + 1).padStart(2, '0')}</span><span></span>`;
+        b.lastChild.textContent = office;
+        b.onclick = () => openSheet(office);
+        list.append(b);
+      });
+      if (!list.children.length) list.innerHTML = '<div class="no-match">ไม่พบสำนักงาน · No office matches</div>';
     }
 
-    async function checkIn(office) {
-      const buttons = list.querySelectorAll('button');
-      buttons.forEach((b) => (b.disabled = true));
+    function openSheet(office) {
+      chosen = office;
+      $('chosen').textContent = office;
+      $('error').classList.add('hidden');
+      $('sheet').classList.remove('hidden');
+      $('confirm').focus();
+    }
+    const closeSheet = () => $('sheet').classList.add('hidden');
+
+    $('confirm').onclick = async () => {
+      $('confirm').disabled = true;
       $('error').classList.add('hidden');
       try {
         const res = await fetch('/api/checkin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ office }),
+          body: JSON.stringify({ office: chosen }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Something went wrong');
-        $('done-office').textContent = office;
-        $('done-time').textContent = 'Checked in at ' +
-          new Date(data.entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        $('done-office').textContent = chosen;
+        $('done-time').textContent = 'เวลา · Time ' +
+          new Date(data.entry.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        closeSheet();
         $('pick').classList.add('hidden');
         $('done').classList.remove('hidden');
+        scrollTo(0, 0);
       } catch (err) {
-        $('error').textContent = err.message + '. Please try again.';
+        $('error').textContent = 'ลงชื่อไม่สำเร็จ กรุณาลองใหม่ · ' + err.message;
         $('error').classList.remove('hidden');
       } finally {
-        buttons.forEach((b) => (b.disabled = false));
+        $('confirm').disabled = false;
       }
-    }
+    };
+    $('cancel').onclick = closeSheet;
+    $('sheet').onclick = (e) => { if (e.target === $('sheet')) closeSheet(); };
 
     $('again').onclick = () => {
+      $('q').value = '';
+      renderList();
       $('done').classList.add('hidden');
       $('pick').classList.remove('hidden');
     };
+
+    $('q').oninput = renderList;
+    renderList();
   </script>
 </body>
 </html>

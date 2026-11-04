@@ -1,82 +1,125 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Check-in log</title>
+  <meta name="theme-color" content="#d92d20">
+  <title>Fire drill roll call</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main class="wide">
-    <h1>Check-in log</h1>
-    <p class="sub">Refreshes every 30 seconds.</p>
-
-    <div class="toolbar">
-      <input type="date" id="date">
-      <select id="office"><option value="">All offices</option></select>
+  <div class="banner wide">
+    <div class="banner-in">
+      <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></div>
+      <div>
+        <h1>เช็กยอดผู้อพยพ · Roll Call</h1>
+        <p id="building"></p>
+      </div>
       <span class="spacer"></span>
-      <button class="btn" id="refresh">Refresh</button>
-      <button class="btn primary" id="csv">Export CSV</button>
-      <button class="btn danger" id="clear">Clear log</button>
+      <span class="live"><i></i>Live</span>
+    </div>
+  </div>
+
+  <main class="wide">
+    <div class="kpis">
+      <div class="panel kpi"><b id="k-total">0</b><span>ลงชื่อแล้ว · Checked in</span></div>
+      <div class="panel kpi" id="k-off-box"><b id="k-offices">0/0</b><span>สำนักงานที่รายงาน · Offices reported</span></div>
+      <div class="panel kpi"><b id="k-time">–</b><span id="k-time-label">เวลาตั้งแต่คนแรก · Since first check-in</span></div>
     </div>
 
-    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <h2>สำนักงาน · Offices</h2>
+      <input type="date" id="date" aria-label="Date">
+      <button class="btn" id="refresh">Refresh</button>
+      <button class="btn dark" id="csv">Export CSV</button>
+      <button class="btn danger" id="clear">Clear log</button>
+    </div>
+    <div class="roll" id="roll"></div>
 
-    <div class="table-wrap">
+    <div class="toolbar">
+      <h2 id="list-title">ลงชื่อล่าสุด · Latest check-ins</h2>
+      <button class="btn hidden" id="show-all">Show all offices</button>
+    </div>
+    <div class="panel table-wrap">
       <table>
-        <thead><tr><th>Date</th><th>Time</th><th>Office</th></tr></thead>
+        <thead><tr><th>Time</th><th>Office</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
-      <div class="empty hidden" id="empty">No check-ins for this filter.</div>
+      <div class="empty hidden" id="empty">ยังไม่มีการลงชื่อ · No check-ins yet</div>
     </div>
     <p class="meta" id="meta"></p>
   </main>
 
   <script type="module">
-    import { OFFICES } from '/offices.js';
+    import { BUILDING, OFFICES } from '/offices.js';
 
     const $ = (id) => document.getElementById(id);
     let all = [];
+    let office = ''; // tile clicked to filter the list
+
+    $('building').textContent = BUILDING;
 
     // Local date as YYYY-MM-DD, used for the date filter
     const dayKey = (d) => d.toLocaleDateString('en-CA');
+    const clock = (d) => d.toLocaleTimeString('en-GB');
     $('date').value = dayKey(new Date());
-    for (const o of OFFICES) $('office').append(new Option(o, o));
 
-    function filtered() {
-      const day = $('date').value, office = $('office').value;
-      return all.filter((c) =>
-        (!day || dayKey(new Date(c.at)) === day) && (!office || c.office === office));
-    }
+    const ofDay = () => all.filter((c) => !$('date').value || dayKey(new Date(c.at)) === $('date').value);
 
     function render() {
-      const rows = filtered();
-      const byDay = all.filter((c) => !$('date').value || dayKey(new Date(c.at)) === $('date').value);
+      const day = ofDay();
+      const counts = Object.fromEntries(OFFICES.map((o) => [o, 0]));
+      for (const c of day) if (c.office in counts) counts[c.office]++;
+      const reported = OFFICES.filter((o) => counts[o] > 0).length;
 
-      $('stats').innerHTML = '';
-      const stat = (n, label) => {
-        const el = document.createElement('div');
-        el.className = 'stat';
-        el.innerHTML = `<b>${n}</b><span></span>`;
-        el.querySelector('span').textContent = label;
-        $('stats').append(el);
-      };
-      stat(byDay.length, $('date').value ? 'Total that day' : 'Total');
-      for (const o of OFFICES) stat(byDay.filter((c) => c.office === o).length, o);
+      $('k-total').textContent = day.length;
+      $('k-offices').textContent = `${reported}/${OFFICES.length}`;
+      $('k-off-box').className = 'panel kpi ' + (reported === OFFICES.length ? 'good' : day.length ? 'alert' : '');
+      tick();
 
+      // Offices not yet reported first, then in list order
+      const order = [...OFFICES].sort((a, b) => (counts[a] > 0) - (counts[b] > 0));
+      $('roll').innerHTML = '';
+      for (const o of order) {
+        const t = document.createElement('button');
+        t.className = 'tile ' + (counts[o] ? 'ok' : 'missing') + (o === office ? ' selected' : '');
+        t.innerHTML = `<div class="name"></div><div class="count">${counts[o]}</div>
+          <div class="state">${counts[o] ? 'รายงานแล้ว<span class="en">Reported</span>' : 'ยังไม่รายงาน<span class="en">Not reported</span>'}</div>`;
+        t.querySelector('.name').textContent = o;
+        t.onclick = () => { office = office === o ? '' : o; render(); };
+        $('roll').append(t);
+      }
+
+      const rows = day.filter((c) => !office || c.office === office);
+      $('list-title').textContent = office ? `${office} · ${rows.length} คน` : 'ลงชื่อล่าสุด · Latest check-ins';
+      $('show-all').classList.toggle('hidden', !office);
       $('rows').innerHTML = '';
       for (const c of rows) {
-        const d = new Date(c.at);
         const tr = document.createElement('tr');
-        for (const v of [d.toLocaleDateString(), d.toLocaleTimeString(), c.office]) {
-          const td = document.createElement('td');
-          td.textContent = v;
-          tr.append(td);
-        }
+        tr.innerHTML = '<td class="t"></td><td></td>';
+        tr.children[0].textContent = clock(new Date(c.at));
+        tr.children[1].textContent = c.office;
         $('rows').append(tr);
       }
       $('empty').classList.toggle('hidden', rows.length > 0);
+    }
+
+    // Elapsed time since the day's first check-in (list is newest first)
+    function tick() {
+      const day = ofDay();
+      if (!day.length) { $('k-time').textContent = '–'; return; }
+      const first = new Date(day[day.length - 1].at);
+      const isToday = dayKey(first) === dayKey(new Date());
+      const end = isToday ? new Date() : new Date(day[0].at);
+      const s = Math.max(0, Math.floor((end - first) / 1000));
+      $('k-time').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      $('k-time-label').textContent = isToday
+        ? `ตั้งแต่ ${clock(first).slice(0, 5)} · Since first check-in`
+        : 'ระยะเวลาซ้อม · First to last check-in';
     }
 
     async function load() {
@@ -85,7 +128,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         all = data.checkins;
-        $('meta').textContent = `${all.length} check-ins stored · updated ${new Date().toLocaleTimeString()}`;
+        $('meta').textContent = `อัปเดต · Updated ${clock(new Date())} · refreshes every 10 s`;
         render();
       } catch (err) {
         $('meta').textContent = 'Could not load: ' + err.message;
@@ -94,14 +137,14 @@
 
     $('csv').onclick = () => {
       const lines = [['date', 'time', 'office', 'timestamp_utc']];
-      for (const c of filtered()) {
+      for (const c of ofDay().filter((c) => !office || c.office === office)) {
         const d = new Date(c.at);
-        lines.push([dayKey(d), d.toLocaleTimeString('en-GB'), c.office, c.at]);
+        lines.push([dayKey(d), clock(d), c.office, c.at]);
       }
       const csv = lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
-      a.download = `checkins-${$('date').value || 'all'}.csv`;
+      a.download = `fire-drill-${$('date').value || 'all'}.csv`;
       a.click();
     };
 
@@ -117,10 +160,12 @@
       }
     };
 
-    $('date').onchange = $('office').onchange = render;
+    $('show-all').onclick = () => { office = ''; render(); };
+    $('date').onchange = render;
     $('refresh').onclick = load;
     load();
-    setInterval(load, 30000);
+    setInterval(load, 10000);
+    setInterval(tick, 1000);
   </script>
 </body>
 </html>
