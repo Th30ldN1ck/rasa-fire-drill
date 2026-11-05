@@ -8,6 +8,8 @@ const MAX = 50000; // keep the list bounded
 
 const memory = [];
 
+export const storage = URL ? 'redis' : 'memory';
+
 async function redis(...command) {
   const res = await fetch(URL, {
     method: 'POST',

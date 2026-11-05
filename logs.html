@@ -25,6 +25,7 @@
   </div>
 
   <main class="wide">
+    <p class="warn hidden" id="warn">⚠️ ยังไม่ได้เชื่อมต่อฐานข้อมูล · Storage isn't connected: check-ins aren't being saved reliably. Add Upstash for Redis in Vercel and redeploy.</p>
     <div class="kpis">
       <div class="panel kpi"><b id="k-total">0</b><span>ลงชื่อแล้ว · Checked in</span></div>
       <div class="panel kpi" id="k-off-box"><b id="k-offices">0/0</b><span>สำนักงานที่รายงาน · Offices reported</span></div>
@@ -129,6 +130,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         all = data.checkins;
+        $('warn').classList.toggle('hidden', data.storage !== 'memory' || location.hostname === 'localhost');
         $('meta').textContent = `อัปเดต · Updated ${clock(new Date())} · refreshes every 10 s`;
         render();
       } catch (err) {

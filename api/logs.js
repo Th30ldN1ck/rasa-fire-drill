@@ -1,6 +1,6 @@
-import { clearCheckins, listCheckins } from './_store.js';
+import { clearCheckins, listCheckins, storage } from './_store.js';
 
-// GET → { checkins: [{ office, at }, …] }, newest first
+// GET → { storage: 'redis'|'memory', checkins: [{ office, at }, …] }, newest first
 // DELETE → removes every check-in
 export default async function handler(req, res) {
   try {
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
       await clearCheckins();
       return res.status(200).json({ ok: true });
     }
-    res.status(200).json({ checkins: await listCheckins() });
+    res.status(200).json({ storage, checkins: await listCheckins() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
