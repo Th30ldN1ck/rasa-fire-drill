@@ -3,7 +3,7 @@
 export const BUILDING = 'Rasa Building 2';
 
 export const OFFICES = [
-  'Office 01', 'Office 02', 'Office 03', 'Office 04',
+  'EasyBuy', 'Shopee', 'CSO', 'Damac',
   'Office 05', 'Office 06', 'Office 07', 'Office 08',
   'Office 09', 'Office 10', 'Office 11', 'Office 12',
   'Office 13', 'Office 14', 'Office 15', 'Office 16',
